@@ -8,98 +8,118 @@
     <script src="//d3js.org/d3.v4.min.js"></script>
     <script src="//d3js.org/topojson.v2.min.js"></script>
     <script>
+    var setai_data;
+    d3.csv("./data/all_setai.csv", function(error, setai_data) {
 
-    var q = d3.queue().defer(d3.json, "./data/miyagi_h29_merge.topojson");
+        var q = d3.queue().defer(d3.json, "./data/miyagi_h29_merge.topojson");
 
-    q.awaitAll(function(error, data){
-        if (error) throw error;
+        q.awaitAll(function(error, data){
+            if (error) throw error;
 
-        var objectKey = "pref";
-        var neighbors = data.map(function(d){return topojson.neighbors(d.objects[objectKey].geometries);});
-        var pi = Math.PI;
-        var tau = 2 * pi;
-        var view = {original: 9.0, center: [(141.67733834000003-140.27488922199998)/2+140.27488922199998, (39.00276172099999-37.77324791900001)/2+37.77324791900001]};
-        var size = {"width": 960, "height": 800};
+            var objectKey = "pref";
+            var neighbors = data.map(function(d){return topojson.neighbors(d.objects[objectKey].geometries);});
+            var pi = Math.PI;
+            var tau = 2 * pi;
+            var view = {original: 9.0, center: [(141.67733834000003-140.27488922199998)/2+140.27488922199998, (39.00276172099999-37.77324791900001)/2+37.77324791900001]};
+            var size = {"width": 960, "height": 800};
 
-        var zoom = d3.zoom()
-            .scaleExtent([1 << (8 + 8), 1 << (8 + 14)])
-            .on("zoom", zoomed);
+            var zoom = d3.zoom()
+                .scaleExtent([1 << (8 + 8), 1 << (8 + 14)])
+                .on("zoom", zoomed);
 
-        var projection = d3.geoOrthographic()
-                            .scale(1 / tau)
-                            .translate([0,0])
-                            .rotate(view.center.map(function(d){return -d;}))
-                            .precision(0.1);
+            var projection = d3.geoOrthographic()
+                                .scale(1 / tau)
+                                .translate([0,0])
+                                .rotate(view.center.map(function(d){return -d;}))
+                                .precision(0.1);
 
-        var center = projection(view.center);
+            var center = projection(view.center);
 
-        var path = d3.geoPath()
-                    .projection(projection);
+            var path = d3.geoPath()
+                        .projection(projection);
 
-        var map = d3.selectAll("body").append("svg")
-                    .data(data)
-                    .attr("class", "chart")
-                    .attr("width", size.width)
-                    .attr("height", size.height)
-                    .style("border", "1px solid #5d995d");
+            var map = d3.selectAll("body").append("svg")
+                        .data(data)
+                        .attr("class", "chart")
+                        .attr("width", size.width)
+                        .attr("height", size.height)
+                        .style("border", "1px solid #5d995d");
 
-        var layer1 = map.append("g");
-        layer1.selectAll(".lands")
-            .data(function(d,i){
-              var features = topojson.feature(d, d.objects[objectKey]).features;
-              features.forEach(function(obj){obj.class = i;});
-              return features;
-            })
-            .enter()
-            .append("path")
-            .attr("class", function(v,i){return "lands land-" + i;})
-            .attr("fill", "#5d995d")
-            .on("mouseover", function(v,i){
+            var layer1 = map.append("g");
+            layer1.selectAll(".lands")
+                .data(function(d,i){
+                  var features = topojson.feature(d, d.objects[objectKey]).features;
+                  features.forEach(function(obj){obj.class = i;});
+                  return features;
+                })
+                .enter()
+                .append("path")
+                .attr("class", function(v,i){return "lands land-" + i;})
+                .attr("fill", "#5d995d")
+                .on("mouseover", function(v,i){
 
-                d3.select(this).attr("fill", "#90ee90");
-                d3.select(".bg-text-" + v.class).text(v.properties.N03_004)
-                    .style("display", "inline");
-            })
-            .on("mouseout", function(v,i){
-                layer1.selectAll(".lands").attr("fill", "#5d995d")
-                text.style("display", "none");
-            });
+                    d3.select(this).attr("fill", "#90ee90");
 
-        layer1.append("path")
-            .datum(function(d){return topojson.mesh(d, d.objects[objectKey], function(a,b){return a !== b;});})
-            .attr("class", "boundary")
-            .attr("fill", "none")
-            .attr("stroke", "white")
-            .attr("stroke-dasharray", "2,2");
+                    setai_data.forEach(function(sd){
+                        if(sd.N03_007 == v.properties.N03_007){
 
-        var layer2 = map.append("g");
-        var text = layer2.append("text")
-                          .attr("class", function(d,i){return "bg-text bg-text-" + i;})
-                          .attr("x", 0)
-                          .attr("y", 20)
-                          .attr("dx", ".2em")
-                          .attr("dy", ".2em")
-                          .text("宮城県");
+                            var contents =
+                                v.properties.N03_004 + " | " +
+                                "300万円未満  : " + sd["300万円未満"] + "世帯" + " | " +
+                                "300～500     : " + sd["300～500"] + "世帯" + " | " +
+                                "500～700     : " + sd["500～700"] + "世帯" + " | " +
+                                "700～1000    : " + sd["700～1000"] + "世帯" + " | " +
+                                "1000万円以上 : " + sd["1000万円以上"] + "世帯";
 
-        map
-            .call(zoom)
-            .call(zoom.transform, d3.zoomIdentity
-                                    .translate(size.width / 2, size.height / 2)
-                                    .scale(1 << (8 + view.original))
-                                    .translate(-center[0], -center[1]));
+                            d3.select(".bg-text-" + v.class).text(contents)
+                                .style("display", "inline");
+                        }
+                    });
+                })
+                .on("mouseout", function(v,i){
+                    layer1.selectAll(".lands").attr("fill", "#5d995d")
+                    text.style("display", "none");
+                });
+
+            layer1.append("path")
+                .datum(function(d){return topojson.mesh(d, d.objects[objectKey], function(a,b){return a !== b;});})
+                .attr("class", "boundary")
+                .attr("fill", "none")
+                .attr("stroke", "white")
+                .attr("stroke-dasharray", "2,2");
+
+            var layer2 = map.append("g");
+            var text = layer2.append("text")
+                              .attr("class", function(d,i){return "bg-text bg-text-" + i;})
+                              .attr("x", 0)
+                              .attr("y", 20)
+                              .attr("dx", ".2em")
+                              .attr("dy", ".2em")
+                              .attr("font-size", "12")
+                              .text("宮城県");
+
+            map
+                .call(zoom)
+                .call(zoom.transform, d3.zoomIdentity
+                                        .translate(size.width / 2, size.height / 2)
+                                        .scale(1 << (8 + view.original))
+                                        .translate(-center[0], -center[1]));
 
 
-        function zoomed() {
-            var transform = d3.event.transform;
+            function zoomed() {
+                var transform = d3.event.transform;
 
-            projection
-                      .scale(transform.k / tau)
-                      .translate([transform.x, transform.y]);
+                projection
+                          .scale(transform.k / tau)
+                          .translate([transform.x, transform.y]);
 
-            map.selectAll("path").attr("d", path);
+                map.selectAll("path").attr("d", path);
 
-        }
-	});
+            }
+
+    	});
+    });
+
     </script>
 </body>
 </html>

@@ -1,0 +1,7 @@
+version: '2'
+services:
+  gdal:
+    image: "gdal:latest"
+    container_name: gdal
+    volumes:
+      - "$PWD/data:/data"
